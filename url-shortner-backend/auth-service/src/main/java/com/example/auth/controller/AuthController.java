@@ -1,101 +1,43 @@
 package com.example.auth.controller;
 
-import com.example.auth.dto.AuthRequest;
-import com.example.auth.dto.AuthResponse;
-import com.example.auth.dto.RegisterRequest;
-import com.example.auth.service.AuthService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
-
 @RestController
-@RequestMapping("/auth")
-@RequiredArgsConstructor
+@RequestMapping("/authh")
 public class AuthController {
 
-    private final AuthService authService;
+    @GetMapping("/validate")
+    public ResponseEntity<String> validate(ServerHttpRequest request) {
+        System.out.println("We have entered the validateeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
 
-    // Register endpoint
-    @PostMapping("/register")
-    public Mono<ResponseEntity<String>> register(@RequestBody RegisterRequest request,
-                                                 ServerHttpResponse response) {
-        return authService.register(request)
-                .map(authResponse -> {
-                    ResponseCookie cookie = ResponseCookie.from("jwt", authResponse.getToken())
-                            .httpOnly(true)
-                            .secure(false) // Set to true in production with HTTPS
-                            .path("/")
-                            .maxAge(Duration.ofDays(1))
-                            .sameSite("Lax")
-                            .build();
 
-                    response.addCookie(cookie);
-                    return ResponseEntity.ok("Registration successful");
-                })
-                .onErrorResume(error ->
-                        Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                .body(error.getMessage()))
-                );
-    }
+        String username = request.getHeaders().getFirst("X-User-Name");
 
-    // Login endpoint
-    @PostMapping("/login")
-    public Mono<ResponseEntity<String>> login(@RequestBody AuthRequest request,
-                                              ServerHttpResponse response) {
-        return authService.authenticate(request)
-                .map(authResponse -> {
-                    ResponseCookie cookie = ResponseCookie.from("jwt", authResponse.getToken())
-                            .httpOnly(true)
-                            .secure(false)
-                            .path("/")
-                            .maxAge(Duration.ofDays(1))
-                            .sameSite("Lax")
-                            .build();
-
-                    response.addCookie(cookie);
-                    return ResponseEntity.ok("Login successful");
-                })
-                .onErrorResume(error ->
-                        Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                .body(error.getMessage()))
-                );
+        System.out.println("This is usernameeeee "+ username);
+        if (username != null && !username.isEmpty()) {
+            return ResponseEntity.ok(username);
+        }
+        return ResponseEntity.status(401).build();
     }
 
     @PostMapping("/logout")
     public Mono<ResponseEntity<Void>> logout(ServerHttpResponse response) {
-        // Create expired cookie
+        System.out.println("We have entered the validateeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
+        // 🔐 Clear the cookie by setting it with maxAge = 0
         ResponseCookie cookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
-                .secure(true) // only send over HTTPS
+                .secure(true)
                 .path("/")
-                .maxAge(0) // expire immediately
-                .sameSite("None") // if cross-origin
+                .maxAge(0)
                 .build();
 
         response.addCookie(cookie);
 
         return Mono.just(ResponseEntity.ok().build());
     }
-
-    @GetMapping("/validate")
-    public Mono<ResponseEntity<String>> validate(@CookieValue(name = "jwt", required = false) String token) {
-        if (token == null || token.isEmpty()) {
-            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No token"));
-        }
-
-        try {
-            String username = authService.getUsernameFromToken(token);
-            return Mono.just(ResponseEntity.ok(username));
-        } catch (Exception e) {
-            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token"));
-        }
-    }
-
-
 }

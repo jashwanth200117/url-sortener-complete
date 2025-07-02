@@ -12,7 +12,7 @@ const Register = () => {
     setSuccess("");
 
     try {
-      const res = await fetch("http://localhost:8080/auth/register", {
+      const res = await fetch("http://localhost:8080/users/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

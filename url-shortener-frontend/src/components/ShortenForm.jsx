@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 const ShortenForm = ({ onResult }) => {
   const [originalUrl, setOriginalUrl] = useState('');
   const [error, setError] = useState('');
+  const [shortenedResult, setShortenedResult] = useState(null);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -13,6 +14,8 @@ const ShortenForm = ({ onResult }) => {
     setError('');
     try {
       const result = await shortenUrl(originalUrl);
+      console.log("the result:-",result);
+      setShortenedResult(result); // 👈 save in state
       onResult(result); // callback to display shortened URL
     } catch (err) {
       setError(err.message || 'Failed to shorten URL');
@@ -44,10 +47,15 @@ const ShortenForm = ({ onResult }) => {
                     Shorten URL
                   </button>
 
+
                   <button
                     type="button"
                     className="btn btn-dark w-50"
-                    onClick={() => navigate("/analytics")}
+                    disabled={!shortenedResult} // 👈 disable until result exists
+                    onClick={() => {
+                      console.log('Short code:', shortenedResult?.shortUrl); // ✅ print to console
+                      navigate(`/analytics?code=${shortenedResult?.shortUrl}`);
+                    }}
                   >
                     View Analytics
                   </button>

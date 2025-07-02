@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 const Analytics = () => {
+  const [searchParams] = useSearchParams();
+  const shortCode = searchParams.get("code");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const shortCode = "596489"; // You can make this dynamic later
+//   const shortCode = "d491ed";
+
   const page = 0;
   const size = 5;
 
@@ -13,12 +17,12 @@ const Analytics = () => {
       try {
         const res = await fetch(`http://localhost:8080/analytics/${shortCode}?page=${page}&size=${size}`, {
           method: "GET",
+          credentials: "include", // ✅ important to include the cookie
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJnYWgiLCJyb2xlIjoiUk9MRV9VU0VSIiwiaWF0IjoxNzUwOTE2MDY1LCJleHAiOjE3NTEwMDI0NjV9.sxIUGyZDRHqW4q1SPQ6HC8JnsjbKmSJV6uJ3CZJjzQ0`
-          },
+            "Content-Type": "application/json"
+            // 🚫 DO NOT include Authorization header manually anymore
+          }
         });
-
         if (!res.ok) {
           throw new Error(`Failed with status ${res.status}`);
         }

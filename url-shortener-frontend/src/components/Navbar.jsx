@@ -9,7 +9,7 @@ const AppNavbar = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:8080/auth/logout", {
+      await fetch("http://localhost:8080/authh/logout", {
         method: "POST",
         credentials: "include",
       });

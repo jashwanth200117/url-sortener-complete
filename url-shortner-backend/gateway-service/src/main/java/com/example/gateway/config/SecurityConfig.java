@@ -29,8 +29,8 @@ public class SecurityConfig {
                 .authorizeExchange(exchange -> exchange
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .pathMatchers("/shorten").permitAll()
-                        .pathMatchers("/auth/**").permitAll()  // ✅ allow login/register without token
                         .pathMatchers("/redirect/**").permitAll()
+                        .pathMatchers("/users/**").permitAll()
                         .anyExchange().authenticated()         // 🔒 protect all other paths
                 )
                 .addFilterBefore(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)

@@ -30,24 +30,21 @@ spring:
             - Path=/shorten/**
           filters:
             - RewritePath=/shorten/(?<segment>.*), /shorten/${segment}
-          # optional: add filters later for security
 
         - id: redirect-service
           uri: lb://redirect-service
           predicates:
             - Path=/redirect/**
-#          filters:
-#            - RemoveRequestHeader=Authorization
 
         - id: analytics-service
           uri: lb://analytics-service
           predicates:
             - Path=/analytics/**
 
-        - id: auth-service
-          uri: lb://auth-service
+        - id: user-management-service
+          uri: lb://user-management-service
           predicates:
-            - Path=/auth/**
+            - Path=/users/**
 
 
 eureka:
@@ -67,3 +64,7 @@ logging:
 jwt:
   secret: Vw3eX5g9Jz4pQ7sYv9rL2eJb3nT6yB1w
   expiration: 86400000 # 1 day in milliseconds
+
+keycloak:
+  public-key: >
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAi563CVMqvxCGXwtrPXJnSwo+SNzZ/7lQ1XNoVuGJT2W+aXWUmc9In2rhT1tlhpDy3MqQySZbk7vCay98QilzBOFosxlkkONNPHSXn4anwyttEI9P1HLPUKnvFiKoTfUGzGDPbZfa5grLI1RDPxUiboaGRrhA7ll3YVeZPH9VI42vW6KHpmMHd5k6COu2JlBYbALH+Yi2ofBVFXxFiHHPk1v50doAbiDwVRkVhCG9mGnImBX3rwH5cks11Cq9SdVZfj1sf9ennOYIPBvTB9tZR0cqRCJXMlczJMSH0URmL8clGlFZKHAvylNPSnpI8Y5OIImGrn1pe6s/a8yTe5JXIwIDAQAB

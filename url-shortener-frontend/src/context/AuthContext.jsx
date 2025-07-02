@@ -1,3 +1,4 @@
+// src/context/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext();
@@ -6,11 +7,12 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState("");
+  const [loading, setLoading] = useState(true); // ✅ New loading flag
 
   // Function to fetch and update auth state
   const fetchAuthStatus = async () => {
     try {
-      const res = await fetch("http://localhost:8080/auth/validate", {
+      const res = await fetch("http://localhost:8080/authh/validate", {
         method: "GET",
         credentials: "include",
       });
@@ -26,6 +28,8 @@ export const AuthProvider = ({ children }) => {
     } catch {
       setIsAuthenticated(false);
       setUsername("");
+    } finally {
+      setLoading(false); // ✅ Done checking auth
     }
   };
 
@@ -35,7 +39,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, username, fetchAuthStatus }}>
+    <AuthContext.Provider value={{ isAuthenticated, username, loading, fetchAuthStatus }}>
       {children}
     </AuthContext.Provider>
   );

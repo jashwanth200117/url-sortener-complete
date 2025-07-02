@@ -1,10 +1,12 @@
 package com.example.gateway.filter;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -15,18 +17,42 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
-import org.springframework.http.HttpMethod;
 
-
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import jakarta.annotation.PostConstruct;
+import java.security.KeyFactory;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.Collections;
 
 @Component
 public class JwtAuthenticationFilter implements WebFilter {
 
-    @Value("${jwt.secret}")
-    private String secret;
+    @Value("${keycloak.public-key}")
+    private String keycloakPublicKey;
+
+    private RSAPublicKey publicKey;
+    @PostConstruct
+    public void init() {
+        try {
+            String cleaned = keycloakPublicKey
+                    .replaceAll("-----BEGIN PUBLIC KEY-----", "")
+                    .replaceAll("-----END PUBLIC KEY-----", "")
+                    .replaceAll("\\s+", ""); // remove newlines and spaces
+
+            byte[] decoded = Base64.getDecoder().decode(cleaned);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decoded);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            this.publicKey = (RSAPublicKey) keyFactory.generatePublic(keySpec);
+
+            System.out.println("✅ Public key loaded successfully!");
+        } catch (Exception e) {
+            System.err.println("❌ Error loading public key:");
+            e.printStackTrace(); // Add this to get full error in console
+            throw new RuntimeException("Failed to load public key", e);
+        }
+    }
+
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
@@ -34,60 +60,70 @@ public class JwtAuthenticationFilter implements WebFilter {
             return chain.filter(exchange);
         }
 
-        System.out.println("Incoming headers: {}"+ exchange.getRequest().getHeaders());
-
         String path = exchange.getRequest().getURI().getPath();
-
-        System.out.println("Incoming request path: " + path);
-
-        // Allow open endpoints
-        if (path.startsWith("/auth/register") ||
-                path.startsWith("/auth/login") ||
-                path.startsWith("/redirect/") ||
-                path.startsWith("/shorten") )  {
+        if (path.startsWith("/shorten") || path.startsWith("/redirect") || path.startsWith("/users/")) {
             return chain.filter(exchange);
         }
 
-        // 🔍 Read JWT from cookie
-        String token = exchange.getRequest().getCookies().getFirst("jwt") != null
-                ? exchange.getRequest().getCookies().getFirst("jwt").getValue()
-                : null;
+        String token = null;
+
+        // 🔍 Try getting token from cookie
+        if (exchange.getRequest().getCookies().getFirst("jwt") != null) {
+            token = exchange.getRequest().getCookies().getFirst("jwt").getValue();
+        }
+
+        System.out.println("First token valueeeeeeeeee------------->"+token);
+
+        // If still null, try from Authorization header (optional)
+        if ((token == null || token.isEmpty()) &&
+                exchange.getRequest().getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
+            String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                token = authHeader.substring(7);
+            }
+        }
+        System.out.println("Second token valueeeeeeeeee------------->"+token);
 
         if (token == null || token.isEmpty()) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
 
-        try {
-            SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(key)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
 
-            String username = claims.getSubject();
-            if (username == null) {
+        try {
+            SignedJWT signedJWT = SignedJWT.parse(token);
+
+            // 🔐 Verify Signature
+            JWSVerifier verifier = new RSASSAVerifier(publicKey);
+            if (!signedJWT.verify(verifier)) {
+                System.out.println("Failed the verification------------->"+token);
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
             }
 
-            // Mutate the request to add the username header
-            ServerWebExchange mutatedExchange = exchange.mutate()
+            JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+            String username = claims.getStringClaim("preferred_username");
+
+            if (username == null) {
+                System.out.println("Username nullleeeeee------------->"+token);
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
+            }
+
+            ServerWebExchange mutated = exchange.mutate()
                     .request(exchange.getRequest().mutate()
                             .header("X-User-Name", username)
                             .build())
                     .build();
 
-            // Create authentication and attach to context
             Authentication auth = new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
-
-            return chain.filter(mutatedExchange)
+            return chain.filter(mutated)
                     .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(
-                            Mono.just(new SecurityContextImpl(auth)))
-                    );
+                            Mono.just(new SecurityContextImpl(auth))
+                    ));
 
         } catch (Exception e) {
+            e.printStackTrace();
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
