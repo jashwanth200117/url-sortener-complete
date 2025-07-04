@@ -58,7 +58,6 @@ eureka:
 
 logging:
   level:
-
     org.springframework.cloud.gateway: DEBUG
 
 jwt:
@@ -67,4 +66,4 @@ jwt:
 
 keycloak:
   public-key: >
-    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAi563CVMqvxCGXwtrPXJnSwo+SNzZ/7lQ1XNoVuGJT2W+aXWUmc9In2rhT1tlhpDy3MqQySZbk7vCay98QilzBOFosxlkkONNPHSXn4anwyttEI9P1HLPUKnvFiKoTfUGzGDPbZfa5grLI1RDPxUiboaGRrhA7ll3YVeZPH9VI42vW6KHpmMHd5k6COu2JlBYbALH+Yi2ofBVFXxFiHHPk1v50doAbiDwVRkVhCG9mGnImBX3rwH5cks11Cq9SdVZfj1sf9ennOYIPBvTB9tZR0cqRCJXMlczJMSH0URmL8clGlFZKHAvylNPSnpI8Y5OIImGrn1pe6s/a8yTe5JXIwIDAQAB
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzP7HXIyscqdOjHGes4tRnN2jQas3s3PfLe9hnsyeY6lWqE7U9rPSyRPfIyDrP6ipZA8OLdrj3Rt9z6xNg2EtwMtqyYjAaA9hj4LHvLTi/EpUEmES9Zn/r86gKmxsOguw9kI7FYPya1K5zY1xy1XdT17nJQ3oraADqdCxxMv20v35xgei0h3Ossr87oVJAxW4NiMbNS0MrD+WxwLAqQJDigoJp/1eihpNpZpkCaZQbyqdC0/d9EvbCtvR8mlXCEZ87iyPEyHam4/Rzgpd+a+fn/melShqKSbcoLTjgzp8YSs6gkAen+pauJSr89QDl6rr3an3luXfIitzeTRSPVvCXQIDAQAB

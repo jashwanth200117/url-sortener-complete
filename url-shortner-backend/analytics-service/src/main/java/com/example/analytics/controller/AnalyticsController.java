@@ -6,6 +6,8 @@ import com.example.analytics.repository.ClickEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +29,7 @@ public class AnalyticsController {
 
     private final ClickEventRepository clickEventRepository;
 
+    @PreAuthorize("hasRole('USER')")
     @GetMapping("/{shortCode}")
     public ResponseEntity<Map<String, Object>> getAnalytics(
             @PathVariable String shortCode,
@@ -76,5 +79,19 @@ public class AnalyticsController {
         summary.put("clickCount", clickCount);
 
         return ResponseEntity.ok(summary);
+    }
+
+    @GetMapping("/test")
+    public ResponseEntity<String> test(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        System.out.println("Authorization Header received: " + authHeader);
+
+        return ResponseEntity.ok("Check logs");
+    }
+
+    @GetMapping("/debug")
+    public String debugRoles(Authentication auth) {
+        System.out.println("User: " + auth.getName());
+        auth.getAuthorities().forEach(a -> System.out.println("Authority: " + a.getAuthority()));
+        return "Check logs";
     }
 }

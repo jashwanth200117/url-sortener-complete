@@ -10,6 +10,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,8 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
 
 import jakarta.annotation.PostConstruct;
 import java.security.KeyFactory;
@@ -24,6 +27,9 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtAuthenticationFilter implements WebFilter {
@@ -104,19 +110,36 @@ public class JwtAuthenticationFilter implements WebFilter {
             JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
             String username = claims.getStringClaim("preferred_username");
 
-            if (username == null) {
-                System.out.println("Username nullleeeeee------------->"+token);
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete();
+            // ✅ Extract roles from realm_access.roles
+            List<String> roles = ((Map<String, List<String>>) claims.getClaim("realm_access")).get("roles");
+
+            System.out.println("✅ Extracted roles from token:");
+            for (String role : roles) {
+                System.out.println("   - " + role);
             }
+
+            // 🔧 Convert roles to GrantedAuthority
+            List<GrantedAuthority> authorities = roles.stream()
+                    .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role.toUpperCase())
+                    .map(r -> {
+                        System.out.println("🛡️ Mapping to GrantedAuthority: " + r);
+                        return new SimpleGrantedAuthority(r);
+                    })
+                    .collect(Collectors.toList());
+
 
             ServerWebExchange mutated = exchange.mutate()
                     .request(exchange.getRequest().mutate()
                             .header("X-User-Name", username)
+                            .header("Authorization", "Bearer " + token)
                             .build())
                     .build();
 
-            Authentication auth = new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
+            // Set authentication object with roles
+            Authentication auth = new UsernamePasswordAuthenticationToken(username, null, authorities);
+
+            System.out.println("✅ Authentication object created with " + authorities.size() + " authorities");
+            // Inject it into Spring Security context
             return chain.filter(mutated)
                     .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(
                             Mono.just(new SecurityContextImpl(auth))

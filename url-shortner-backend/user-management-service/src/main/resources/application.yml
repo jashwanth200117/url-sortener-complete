@@ -8,7 +8,7 @@ server:
 keycloak:
   realm: master
   server-url: http://localhost:8086
-  client-id: admin-cli
+  client-id: react-client
   admin-username: admin
   admin-password: admin
 
